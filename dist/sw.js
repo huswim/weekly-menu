@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'weekly-table-';
-const CACHE_NAME = CACHE_PREFIX + '5c6721ed58af';
+const CACHE_NAME = CACHE_PREFIX + 'abb06e799afc';
 const CORE = ['/', '/index.html', '/menu.json', '/pwa.js', '/manifest.webmanifest', '/assets/icons/icon-192.png', '/assets/icons/icon-512.png', '/assets/icons/apple-touch-icon.png'];
 const OPTIONAL = ['/assets/weekly-menu.pdf', '/assets/original-menu.jpeg'];
 const ALLOWED = new Set([...CORE, ...OPTIONAL]);
@@ -41,6 +41,10 @@ self.addEventListener('fetch', event => {
   if (request.method !== 'GET' || url.origin !== self.location.origin || !ALLOWED.has(url.pathname)) return;
   event.respondWith((async () => {
     const cache = await caches.open(CACHE_NAME);
+    // This one-week menu is immutable. Serve the saved app and data
+    // immediately; service-worker version updates replace the app cache.
+    const saved = await cache.match(url.pathname);
+    if (saved) return saved;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 4500);
     try {

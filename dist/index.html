@@ -81,5 +81,38 @@ document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{automatic=f
  document.getElementById('today').onclick=()=>syncTime(true);
  setInterval(()=>syncTime(),30000);
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncTime()});
- fetch('menu.json').then(r=>{if(!r.ok)throw Error();return r.json()}).then(d=>{data=d;todayIndex=currentContext().today;selected=todayIndex>=0?todayIndex:0;data.forEach((d,i)=>{const b=document.createElement('button');b.className='day'+(i===todayIndex?' today':'');b.innerHTML=`<small>${d.day}</small><strong>${d.date}</strong><span class="dot"></span>`;b.setAttribute('aria-label',`10월 ${d.date}일 ${d.day}요일${i===todayIndex?', 오늘':''}`);b.onclick=()=>selectDay(i);document.getElementById('dates').append(b)});syncTime(true);revealMenu()}).catch(()=>{document.getElementById('title').textContent='식단을 불러오지 못했습니다';document.getElementById('menu').innerHTML='<p>페이지를 새로고침하시거나 아래 원본 PDF를 확인해 주세요.</p>'});
+
+const MENU_CACHE_KEY = 'weekly-menu-2026-10-19';
+function isMenuData(value){
+ const rows=v=>Array.isArray(v)&&v.every(x=>x&&typeof x.name==='string'&&typeof x.allergy==='string');
+ return Array.isArray(value)&&value.length===5&&value.every(d=>d&&typeof d.day==='string'&&Number.isInteger(d.date)&&Array.isArray(d.meals)&&d.meals.length===3&&d.meals.every(m=>m&&Array.isArray(m.corners)&&m.corners.every(c=>c&&typeof c.label==='string'&&Array.isArray(c.items)&&c.items.length>0&&rows(c.items))&&rows(m.extra)&&rows(m.allergy)));
+}
+function showMenu(value){
+ if(!isMenuData(value))throw new Error('Invalid menu');
+ if(data.length&&JSON.stringify(data)===JSON.stringify(value))return;
+ const first=!data.length;
+ data=value;todayIndex=currentContext().today;
+ if(first)selected=todayIndex>=0?todayIndex:0;
+ const dates=document.getElementById('dates');dates.replaceChildren();
+ data.forEach((d,i)=>{const b=document.createElement('button');b.className='day'+(i===todayIndex?' today':'');b.innerHTML=`<small>${d.day}</small><strong>${d.date}</strong><span class="dot"></span>`;b.setAttribute('aria-label',`10월 ${d.date}일 ${d.day}요일${i===todayIndex?', 오늘':''}`);b.onclick=()=>selectDay(i);dates.append(b)});
+ if(first){syncTime(true);revealMenu()}else{syncTime();render()}
+}
+function loadMenu(){
+ let cached;
+ try{cached=JSON.parse(localStorage.getItem(MENU_CACHE_KEY));if(!isMenuData(cached))cached=null}catch{cached=null}
+ if(cached){showMenu(cached);return Promise.resolve()}
+ return fetch('menu.json')
+  .then(response=>{if(!response.ok)throw new Error('Menu request failed');return response.json()})
+  .then(value=>{
+   if(!isMenuData(value))throw new Error('Invalid menu');
+   try{localStorage.setItem(MENU_CACHE_KEY,JSON.stringify(value))}catch{}
+   showMenu(value);
+  })
+  .catch(()=>{
+   if(data.length)return;
+   document.getElementById('title').textContent='식단을 불러오지 못했습니다';
+   document.getElementById('menu').innerHTML='<p>페이지를 새로고침하시거나 아래 원본 PDF를 확인해 주세요.</p>';
+  });
+}
+loadMenu();
 </script><script src="pwa.js" defer></script></body></html>
