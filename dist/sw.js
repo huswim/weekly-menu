@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'weekly-table-';
-const CACHE_NAME = CACHE_PREFIX + 'a39934eb5117';
+const CACHE_NAME = CACHE_PREFIX + '037ff43f4ac4';
 const CORE = ['/', '/menu.json', '/pwa.js', '/manifest.webmanifest', '/assets/icons/icon-192.png', '/assets/icons/icon-512.png', '/assets/icons/apple-touch-icon.png'];
 const OPTIONAL = ['/assets/weekly-menu.pdf', '/assets/original-menu.jpeg'];
 const ALLOWED = new Set([...CORE, ...OPTIONAL]);

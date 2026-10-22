@@ -49,7 +49,7 @@ themeToggle.onclick=()=>{const theme=document.documentElement.dataset.theme==='d
 systemTheme.addEventListener('change',event=>{let saved;try{saved=localStorage.getItem('weekly-menu-theme')}catch{}if(saved!=='dark'&&saved!=='light')applyTheme(event.matches?'dark':'light')});
 
 if('scrollRestoration' in history)history.scrollRestoration='manual';
-let data=[],selected=0,filter='all',automatic=true,todayIndex=-1;const names=['조식','중식','석식'],en=['BREAKFAST','LUNCH','DINNER'],icons=['☀','♨','☾'];
+let data=[],selected=0,filter='all',automatic=true,todayIndex=-1,weekFinished=false;const names=['조식','중식','석식'],en=['BREAKFAST','LUNCH','DINNER'],icons=['☀','♨','☾'];
 function revealMenu(){
  requestAnimationFrame(()=>{
   const hero=document.querySelector('.hero');
@@ -58,25 +58,30 @@ function revealMenu(){
 }
 function currentContext(date=new Date()){
  const parts=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(date).map(p=>[p.type,p.value]));
+ const dates=['2026-10-19','2026-10-20','2026-10-21','2026-10-22','2026-10-23'];
  const key=`${parts.year}-${parts.month}-${parts.day}`;
  const minutes=Number(parts.hour)*60+Number(parts.minute);
- return {today:['2026-10-19','2026-10-20','2026-10-21','2026-10-22','2026-10-23'].indexOf(key),meal:minutes<=510?'0':minutes<=810?'1':minutes<=1140?'2':'0'};
+ const afterDinner=minutes>1140;
+ const target=new Date(Date.UTC(Number(parts.year),Number(parts.month)-1,Number(parts.day)+(afterDinner?1:0))).toISOString().slice(0,10);
+ return {today:dates.indexOf(key),displayDay:dates.indexOf(target),ended:target>dates[dates.length-1],afterDinner,meal:minutes<=510?'0':minutes<=810?'1':minutes<=1140?'2':'0'};
 }
 function selectDay(index){
- if(index===currentContext().today){syncTime(true);return;}
+ const context=currentContext();
+ if(index===context.today&&!context.afterDinner){syncTime(true);return;}
  automatic=false;selected=index;filter='all';render();
 }
 function syncTime(force=false){
  if(!data.length)return;
  const context=currentContext(),previous=todayIndex;todayIndex=context.today;
  if(force)automatic=true;
- const before=`${selected}/${filter}`;
- if(automatic){selected=todayIndex>=0?todayIndex:0;filter=todayIndex>=0?context.meal:'all';}
+ const before=`${selected}/${filter}/${weekFinished}`;
+ weekFinished=context.ended;
+ if(automatic){selected=context.displayDay>=0?context.displayDay:context.ended?data.length-1:0;filter=context.displayDay>=0?context.meal:'all';}
  document.getElementById('today').classList.toggle('hidden',todayIndex<0);
  document.querySelectorAll('.day').forEach((b,i)=>{b.classList.toggle('today',i===todayIndex);b.setAttribute('aria-label',`10월 ${data[i].date}일 ${data[i].day}요일${i===todayIndex?', 오늘':''}`)});
- if(force||before!==`${selected}/${filter}`||previous!==todayIndex)render();
+ if(force||before!==`${selected}/${filter}/${weekFinished}`||previous!==todayIndex)render();
 }
-function render(){const d=data[selected];document.querySelectorAll('[data-filter]').forEach(b=>{b.classList.toggle('active',b.dataset.filter===filter);b.setAttribute('aria-pressed',String(b.dataset.filter===filter))});document.getElementById('timeHint').textContent=automatic&&todayIndex>=0?'한국 시간에 맞춰 '+names[Number(filter)]+' 메뉴를 먼저 보여드려요.':'이번 주 메뉴를 미리 살펴보세요.';document.querySelectorAll('.day').forEach((b,i)=>{b.classList.toggle('selected',i===selected);b.setAttribute('aria-pressed',String(i===selected))});document.getElementById('title').textContent=d.day+'요일의 식단';document.getElementById('caption').textContent='10월 '+d.date+'일';document.getElementById('badge').classList.toggle('hidden',selected!==todayIndex);document.getElementById('menu').innerHTML=d.meals.map((m,i)=>filter!=='all'&&+filter!==i?'':`<article class="meal"><div class="meal-head"><span class="icon" aria-hidden="true">${icons[i]}</span><h3>${names[i]}</h3><span class="en">${en[i]}</span></div>${m.corners.length?`<div class="corners">${m.corners.map((c,j)=>`<section class="corner"><span class="tag ${j?'b':''}">${c.label}</span><h4>${c.items[0].name}</h4><ul class="items">${c.items.slice(1).map(x=>`<li>${x.name}</li>`).join('')}</ul></section>`).join('')}</div>${m.extra.length?`<div class="extra"><strong>${i===0?'함께 드세요':'후식 · 음료'}</strong><span>${m.extra.map(x=>x.name).join(' · ')}</span></div>`:''}<details class="allergy"><summary>알레르기 표시 보기</summary><div class="allergy-content"><p>첨부 PDF에 기재된 내용을 그대로 옮겼습니다. 빈칸은 ‘원본 표시 없음’으로 표기하며, 알레르기 물질이 없다는 의미는 아닙니다.</p>${m.allergy.map(x=>`<div class="allergy-row"><strong>${x.name}</strong><span>${x.allergy||'원본 표시 없음'}</span></div>`).join('')}</div></details>`:`<div class="empty"><strong>${i===0?'오늘부터 시작 🌿':'다음 주에 만나요 :)'}</strong>${i===0?'월요일 조식':'금요일 석식'} 메뉴는 원본에 안내되어 있지 않습니다.</div>`}</article>`).join('')}
+function render(){const d=data[selected];document.querySelectorAll('[data-filter]').forEach(b=>{b.classList.toggle('active',b.dataset.filter===filter);b.setAttribute('aria-pressed',String(b.dataset.filter===filter))});document.getElementById('timeHint').textContent=automatic&&weekFinished?'이번 주 식단 안내가 종료되었습니다.':automatic&&selected!==todayIndex&&filter==='0'?'내일 조식 메뉴를 먼저 보여드려요.':automatic&&todayIndex>=0?'한국 시간에 맞춰 '+names[Number(filter)]+' 메뉴를 먼저 보여드려요.':'이번 주 메뉴를 미리 살펴보세요.';document.querySelectorAll('.day').forEach((b,i)=>{b.classList.toggle('selected',i===selected);b.setAttribute('aria-pressed',String(i===selected))});document.getElementById('title').textContent=automatic&&weekFinished?'식단 안내 종료':d.day+'요일의 식단';document.getElementById('caption').textContent='10월 '+d.date+'일';document.getElementById('badge').classList.toggle('hidden',selected!==todayIndex||(automatic&&weekFinished));document.getElementById('menu').innerHTML=automatic&&weekFinished?'<article class="meal"><div class="empty"><strong>다음 조식 정보가 없습니다.</strong>제공된 식단은 10월 23일까지입니다. 날짜를 선택하면 지난 식단을 확인하실 수 있습니다.</div></article>':d.meals.map((m,i)=>filter!=='all'&&+filter!==i?'':`<article class="meal"><div class="meal-head"><span class="icon" aria-hidden="true">${icons[i]}</span><h3>${names[i]}</h3><span class="en">${en[i]}</span></div>${m.corners.length?`<div class="corners">${m.corners.map((c,j)=>`<section class="corner"><span class="tag ${j?'b':''}">${c.label}</span><h4>${c.items[0].name}</h4><ul class="items">${c.items.slice(1).map(x=>`<li>${x.name}</li>`).join('')}</ul></section>`).join('')}</div>${m.extra.length?`<div class="extra"><strong>${i===0?'함께 드세요':'후식 · 음료'}</strong><span>${m.extra.map(x=>x.name).join(' · ')}</span></div>`:''}<details class="allergy"><summary>알레르기 표시 보기</summary><div class="allergy-content"><p>첨부 PDF에 기재된 내용을 그대로 옮겼습니다. 빈칸은 ‘원본 표시 없음’으로 표기하며, 알레르기 물질이 없다는 의미는 아닙니다.</p>${m.allergy.map(x=>`<div class="allergy-row"><strong>${x.name}</strong><span>${x.allergy||'원본 표시 없음'}</span></div>`).join('')}</div></details>`:`<div class="empty"><strong>${i===0?'오늘부터 시작 🌿':'다음 주에 만나요 :)'}</strong>${i===0?'월요일 조식':'금요일 석식'} 메뉴는 원본에 안내되어 있지 않습니다.</div>`}</article>`).join('')}
 document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{automatic=false;filter=b.dataset.filter;if(data.length)render()});
  document.getElementById('today').onclick=()=>syncTime(true);
  setInterval(()=>syncTime(),30000);
