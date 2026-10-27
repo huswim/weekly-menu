@@ -66,7 +66,7 @@
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (reloadAfterUpdate) window.location.reload();
   });
-  navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' })
+  navigator.serviceWorker.register('sw.js', { scope: './', updateViaCache: 'none' })
     .then(registration => {
       if (registration.waiting && navigator.serviceWorker.controller) offerUpdate(registration.waiting);
       registration.addEventListener('updatefound', () => {
