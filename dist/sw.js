@@ -1,7 +1,9 @@
 const CACHE_PREFIX = 'weekly-table-';
 const CACHE_NAME = CACHE_PREFIX + '037ff43f4ac4';
-const CORE = ['/', '/menu.json', '/pwa.js', '/manifest.webmanifest', '/assets/icons/icon-192.png', '/assets/icons/icon-512.png', '/assets/icons/apple-touch-icon.png'];
-const OPTIONAL = ['/assets/weekly-menu.pdf', '/assets/original-menu.jpeg'];
+// Resolve resources relative to the worker, so the app works under /weekly-menu/ on GitHub Pages.
+const BASE_PATH = new URL('.', self.location.href).pathname;
+const CORE = ['', 'menu.json', 'pwa.js', 'manifest.webmanifest', 'assets/icons/icon-192.png', 'assets/icons/icon-512.png', 'assets/icons/apple-touch-icon.png'].map(path => BASE_PATH + path);
+const OPTIONAL = ['assets/weekly-menu.pdf', 'assets/original-menu.jpeg'].map(path => BASE_PATH + path);
 const ALLOWED = new Set([...CORE, ...OPTIONAL]);
 
 self.addEventListener('install', event => {
