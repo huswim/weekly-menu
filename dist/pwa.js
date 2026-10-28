@@ -54,7 +54,8 @@
   if (!('serviceWorker' in navigator)) return;
   function offerUpdate(worker) {
     waitingWorker = worker;
-    updateNotice.classList.remove('hidden');
+    reloadAfterUpdate = true;
+    worker.postMessage({ type: 'SKIP_WAITING' });
   }
   updateButton.addEventListener('click', () => {
     if (!waitingWorker) return;

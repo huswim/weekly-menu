@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'weekly-table-';
-const CACHE_NAME = CACHE_PREFIX + '037ff43f4ac4';
+const CACHE_NAME = CACHE_PREFIX + 'af52a39d8a9c';
 // Resolve resources relative to the worker, so the app works under /weekly-menu/ on GitHub Pages.
 const BASE_PATH = new URL('.', self.location.href).pathname;
-const CORE = ['', 'menu.json', 'pwa.js', 'manifest.webmanifest', 'assets/icons/icon-192.png', 'assets/icons/icon-512.png', 'assets/icons/apple-touch-icon.png'].map(path => BASE_PATH + path);
-const OPTIONAL = ['assets/weekly-menu.pdf', 'assets/original-menu.jpeg'].map(path => BASE_PATH + path);
+const CORE = ['', 'weeks.json', 'pwa.js', 'manifest.webmanifest', 'assets/icons/icon-192.png', 'assets/icons/icon-512.png', 'assets/icons/apple-touch-icon.png'].map(path => BASE_PATH + path);
+const OPTIONAL = ['assets/weekly-menu.pdf'].map(path => BASE_PATH + path);
 const ALLOWED = new Set([...CORE, ...OPTIONAL]);
 
 self.addEventListener('install', event => {
@@ -40,13 +40,13 @@ function isValid(response, path) {
 self.addEventListener('fetch', event => {
   const request = event.request;
   const url = new URL(request.url);
-  if (request.method !== 'GET' || url.origin !== self.location.origin || !ALLOWED.has(url.pathname)) return;
+  if (request.method !== 'GET' || url.origin !== self.location.origin || (!ALLOWED.has(url.pathname) && !url.pathname.startsWith(BASE_PATH + 'assets/menu-'))) return;
   event.respondWith((async () => {
     const cache = await caches.open(CACHE_NAME);
     // This one-week menu is immutable. Serve the saved app and data
     // immediately; service-worker version updates replace the app cache.
     const saved = await cache.match(url.pathname);
-    if (saved) return saved;
+    if (saved && !url.pathname.endsWith('/weeks.json')) return saved;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 4500);
     try {
