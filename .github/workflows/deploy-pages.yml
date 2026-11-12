@@ -51,6 +51,26 @@ jobs:
             git push origin HEAD:main
             echo 'changed=true' >> "$GITHUB_OUTPUT"
           fi
+      - name: Validate published menu entries
+        run: |
+          python3 - <<'PY'
+          import json
+          import re
+          from pathlib import Path
+          weeks = json.loads(Path('dist/weeks.json').read_text())['weeks']
+          for week in weeks:
+              for day in week['days']:
+                  for meal in day['meals']:
+                      items = meal['extra'] + meal['allergy']
+                      for corner in meal['corners']:
+                          items += corner['items']
+                      for item in items:
+                          name = item['name']
+                          if re.fullmatch(r'우+|([가-힣])\1{3,}', name):
+                              raise SystemExit(
+                                  f"Corrupted PDF row in {day['date']}: {name}"
+                              )
+          PY
       - name: Update PWA cache version
         if: github.event_name == 'push' || steps.save.outputs.changed == 'true'
         run: python3 build-pwa.py
