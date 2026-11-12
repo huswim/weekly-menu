@@ -63,9 +63,15 @@ def parse_pdf(blob, start, end):
                 section = found.group(1).replace(' ', '')
                 line = line[found.end():].strip()
             if not section or not line: continue
+            # Some PDFs emit detached '우' glyphs immediately before the footer.
+            # They are extraction artifacts, not dishes or allergen labels.
+            if re.fullmatch(r'우+', line):
+                continue
             parts = re.split(r'\s+', line, maxsplit=1)
             name = parts[0]
             allergy = parts[1].strip() if len(parts)>1 else ''
+            if not allergy and re.fullmatch(r'([가-힣])\1{3,}', name):
+                raise ValueError(f'Suspicious repeated PDF glyphs: {line}')
             if allergy and not all(x.strip() in ALLERGENS for x in allergy.split(',')):
                 raise ValueError(f'Unrecognized PDF row: {line}')
             sections[section].append({'name':name, 'allergy':allergy})
@@ -100,8 +106,9 @@ def main():
         blob = fetch(urllib.parse.urljoin(ORIGIN, html.unescape(match.group(1))))
         digest = hashlib.sha256(blob).hexdigest()
         existing = next((w for w in index['weeks'] if w['start']==week.isoformat()), None)
-        if existing and existing.get('sha256')==digest: continue
         days = parse_pdf(blob, start, end)
+        # Reparse unchanged PDFs after parser fixes, but avoid redundant commits.
+        if existing and existing.get('sha256')==digest and existing.get('days')==days: continue
         file = f'assets/menu-{week.isoformat()}.pdf'
         (ROOT/file).write_bytes(blob)
         entry={'start':week.isoformat(),'end':end.isoformat(),'days':days,'source':url,'pdf':file,'sha256':digest}
