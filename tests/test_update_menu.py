@@ -47,6 +47,24 @@ class PdfAllergenTests(unittest.TestCase):
                     "name": "소보로메추리알조림", "allergy": allergy
                 })
 
+    def test_pdf_footer_glyph_artifacts_are_not_menu_items(self):
+        for artifact in ("우", "우우우우우우우우우우우"):
+            with self.subTest(artifact=artifact):
+                days = self.parse_week(
+                    "정상메뉴 난류, 밀\n"
+                    "그린샐러드&드레싱 난류, 대두, 밀\n"
+                    + artifact
+                )
+                items = days[0]["meals"][0]["allergy"]
+                self.assertEqual(
+                    [item["name"] for item in items],
+                    ["정상메뉴", "그린샐러드&드레싱"],
+                )
+
+    def test_other_repeated_glyphs_are_rejected(self):
+        with self.assertRaisesRegex(ValueError, "Suspicious repeated PDF glyphs"):
+            self.parse_week("정상메뉴 난류\n가가가가가")
+
     def test_unrecognized_allergen_still_fails(self):
         with self.assertRaisesRegex(ValueError, "Unrecognized PDF row"):
             self.parse_week("소보로메추리알조림 소고기, 알수없는성분")
