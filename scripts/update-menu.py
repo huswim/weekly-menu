@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent / 'dist'
 BOARD = 'https://www.mma.go.kr/educenter/board/boardList.do?mc=mma0001927&gesipan_id=230'
 ORIGIN = 'https://www.mma.go.kr'
 DATE = re.compile(r'(20\d\d)\s*[.\-/]\s*(\d{1,2})\s*[.\-/]\s*(\d{1,2})\s*\.?\s*[~～-]\s*(?:(20\d\d)\s*[.\-/]\s*)?(\d{1,2})\s*[.\-/]\s*(\d{1,2})')
-ALLERGENS = {'난류','우유','메밀','땅콩','대두','밀','고등어','게','새우','돼지고기','복숭아','토마토','아황산류','호두','닭고기','쇠고기','오징어','조개류','잣'}
+ALLERGENS = {'난류','우유','메밀','땅콩','대두','밀','고등어','게','새우','돼지고기','복숭아','토마토','아황산류','호두','닭고기','쇠고기','소고기','오징어','조개류','잣'}
 
 def fetch(url):
     req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 weekly-menu/1.0'})
