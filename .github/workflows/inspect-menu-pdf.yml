@@ -29,3 +29,42 @@ jobs:
                       for nearby in lines[max(0,j-3):min(len(lines),j+4)]:
                           print("  ",repr(nearby))
           PY
+      - name: Validate parser against retained PDF and stored menu
+        run: |
+          python -m unittest discover -s tests -v
+          python - <<'PY'
+          import copy
+          import datetime as dt
+          import importlib.util
+          import json
+          import re
+          from pathlib import Path
+          from pypdf import PdfReader
+
+          file = Path("scripts/update-menu.py")
+          spec = importlib.util.spec_from_file_location("update_menu", file)
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          old = json.loads(Path("dist/weeks.json").read_text())["weeks"][0]["days"]
+          parsed = module.parse_pdf(
+              Path("dist/assets/menu-2026-11-16.pdf").read_bytes(),
+              dt.date(2026, 11, 16),
+              dt.date(2026, 11, 20),
+          )
+          expected = copy.deepcopy(old)
+          removed = []
+          for day in expected:
+              for meal in day["meals"]:
+                  for field in ("extra", "allergy"):
+                      kept = []
+                      for item in meal[field]:
+                          if re.fullmatch("우+", item["name"]):
+                              removed.append((day["date"], field, item["name"]))
+                          else:
+                              kept.append(item)
+                      meal[field] = kept
+          print("REMOVED_ROWS", removed)
+          assert len(removed) == 10, f"Expected 5 extra+allergy duplicated phantom rows, got {len(removed)}"
+          assert parsed == expected, "Parsed PDF differs beyond stripping known artifacts"
+          print("PASS: Source PDF parses to expected menu without artifacts")
+          PY
